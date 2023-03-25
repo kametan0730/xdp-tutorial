@@ -12,12 +12,12 @@
 #
 LLC ?= llc
 CLANG ?= clang
-CC ?= gcc
+CC ?= g++
 
 XDP_C = ${XDP_TARGETS:=.c}
 XDP_OBJ = ${XDP_C:.c=.o}
-USER_C := ${USER_TARGETS:=.c}
-USER_OBJ := ${USER_C:.c=.o}
+USER_C := ${USER_TARGETS:=.cpp}
+USER_OBJ := ${USER_C:.cpp=.o}
 
 # Expect this is defined by including Makefile, but define if not
 COMMON_DIR ?= ../common/
@@ -96,14 +96,14 @@ $(OBJECT_LIBBPF):
 
 # Create dependency: detect if C-file change and touch H-file, to trigger
 # target $(COMMON_OBJS)
-$(COMMON_H): %.h: %.c
+$(COMMON_H): %.h: %.cpp
 	touch $@
 
 # Detect if any of common obj changed and create dependency on .h-files
 $(COMMON_OBJS): %.o: %.h
 	make -C $(COMMON_DIR)
 
-$(USER_TARGETS): %: %.c  $(OBJECT_LIBBPF) Makefile $(COMMON_MK) $(COMMON_OBJS) $(KERN_USER_H) $(EXTRA_DEPS)
+$(USER_TARGETS): %: %.cpp  $(OBJECT_LIBBPF) Makefile $(COMMON_MK) $(COMMON_OBJS) $(KERN_USER_H) $(EXTRA_DEPS)
 	$(CC) -Wall $(CFLAGS) $(LDFLAGS) -o $@ $(COMMON_OBJS) \
 	 $< $(LIBS)
 
