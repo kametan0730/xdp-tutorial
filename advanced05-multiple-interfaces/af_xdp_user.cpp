@@ -68,51 +68,6 @@ static inline __u32 xsk_ring_prod__free(struct xsk_ring_prod *r) {
 
 static const char *__doc__ = "AF_XDP kernel bypass example\n";
 
-static const struct option_wrapper long_options[] = {
-
-    {{"help", no_argument, NULL, 'h'}, "Show help", false},
-
-    {{"dev", required_argument, NULL, 'd'},
-     "Operate on device <ifname>",
-     "<ifname>",
-     true},
-
-    {{"skb-mode", no_argument, NULL, 'S'},
-     "Install XDP program in SKB (AKA generic) mode"},
-
-    {{"native-mode", no_argument, NULL, 'N'},
-     "Install XDP program in native mode"},
-
-    {{"auto-mode", no_argument, NULL, 'A'}, "Auto-detect SKB or native mode"},
-
-    {{"force", no_argument, NULL, 'F'},
-     "Force install, replacing existing program on interface"},
-
-    {{"copy", no_argument, NULL, 'c'}, "Force copy mode"},
-
-    {{"zero-copy", no_argument, NULL, 'z'}, "Force zero-copy mode"},
-
-    {{"queue", required_argument, NULL, 'Q'},
-     "Configure interface receive queue for AF_XDP, default=0"},
-
-    {{"poll-mode", no_argument, NULL, 'p'},
-     "Use the poll() API waiting for packets to arrive"},
-
-    {{"unload", no_argument, NULL, 'U'},
-     "Unload XDP program instead of loading"},
-
-    {{"quiet", no_argument, NULL, 'q'}, "Quiet mode (no output)"},
-
-    {{"filename", required_argument, NULL, 1},
-     "Load program from <file>",
-     "<file>"},
-
-    {{"progsec", required_argument, NULL, 2},
-     "Load program in <section> of the ELF file",
-     "<section>"},
-
-    {{0, 0, NULL, 0}, NULL, false}};
-
 static bool global_exit;
 int num_ifs;
 
@@ -120,7 +75,7 @@ static struct xsk_umem_info *configure_xsk_umem(void *buffer, uint64_t size) {
   struct xsk_umem_info *umem;
   int ret;
 
-  umem = calloc(1, sizeof(*umem));
+  umem = (struct xsk_umem_info *)calloc(1, sizeof(*umem));
   if (!umem)
     return NULL;
 
@@ -163,7 +118,7 @@ xsk_configure_socket(struct config *cfg, struct xsk_umem_info *umem) {
   int i;
   int ret;
 
-  xsk_info = calloc(1, sizeof(*xsk_info));
+  xsk_info = (struct xsk_socket_info *)calloc(1, sizeof(*xsk_info));
   if (!xsk_info)
     return NULL;
 
@@ -245,14 +200,14 @@ static inline __sum16 csum16_sub(__sum16 csum, __be16 addend) {
   return csum16_add(csum, ~addend);
 }
 
-static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new) {
-  *sum = ~csum16_add(csum16_sub(~(*sum), old), new);
+static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new_v) {
+  *sum = ~csum16_add(csum16_sub(~(*sum), old), new_v);
 }
 
 static bool process_packet(struct xsk_socket_info *xsk, const char *ifname, uint64_t addr,
                            uint32_t len)
 {
-  uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
+  uint8_t *pkt = (uint8_t *)xsk_umem__get_data(xsk->umem->buffer, addr);
 
   printf("[%s] ", ifname);
 
@@ -448,7 +403,7 @@ static void stats_print(struct stats_record *stats_rec,
 
 static void *stats_poll(void *arg) {
   unsigned int interval = 2;
-  struct xsk_socket_info **xsks = arg;
+  struct xsk_socket_info **xsks = (struct xsk_socket_info **)arg;
   static struct stats_record previous_stats = {0};
 
   previous_stats.timestamp = gettime();
@@ -503,7 +458,7 @@ int main(int argc, char **argv) {
     rlims[i].rlim_max = RLIM_INFINITY;
 
     strncpy(cfgs[i].ifname_buf, enable_interfaces[i], IF_NAMESIZE);
-    cfgs[i].ifname = &cfgs[i].ifname_buf;
+    cfgs[i].ifname = (char *) &cfgs[i].ifname_buf;
     cfgs[i].ifindex = if_nametoindex(cfgs[i].ifname);
 
     printf("index %d\n", cfgs[i].ifindex);
